@@ -47,27 +47,80 @@ app.get("/api/songs", function(req, res) {
 });
 
 app.get("/api/playlists", function(req, res) {
-    db.any("SELECT id, name FROM playlist")
-      .then(function(data) {
-        res.json(data);
-      })
-      .catch(function(error) {
-        res.json({ error: error.message });
-      });
-  });
+  db.any("SELECT id, name FROM playlist")
+    .then(function(data) {
+      res.json(data);
+    })
+    .catch(function(error) {
+      res.json({ error: error.message });
+    });
+});
 
-  app.get("/api/songs/:id", function(req, res) {
-    const id = req.params.id
-    console.log(id)
-    db.any("SELECT song.id, artist.name, song.title FROM song, artist WHERE artist.id = song.artist_id AND song.id = $1" , [id])
-      .then(function(data) {
-        res.json(data);
-      })
-      .catch(function(error) {
-        res.json({ error: error.message });
-      });
-  });
+app.get("/api/songs/:id", function(req, res) {
+  const id = req.params.id;
+  console.log(id);
+  db.any(
+    "SELECT song.id, artist.name, song.title FROM song, artist WHERE artist.id = song.artist_id AND song.id = $1",
+    [id]
+  )
+    .then(function(data) {
+      res.json(data);
+    })
+    .catch(function(error) {
+      res.json({ error: error.message });
+    });
+});
 
+app.post("/api/artists", function(req, res) {
+  const { artist, email } = req.body;
+  db.one(
+    `INSERT INTO artist(name, email)
+      VALUES($1, $2) RETURNING id`,
+    [artist, email]
+  )
+    .then(data => {
+      res.json(Object.assign({}, { id: data.id }, req.body));
+    })
+    .catch(error => {
+      res.json({
+        error: error.message
+      });
+    });
+});
+
+app.post("/api/songs", function(req, res) {
+  // using destructing assignment to
+  // extract properties into variables
+  const { artistId, title, year } = req.body;
+  // ES6 strings for multiline
+  db.one(
+    `INSERT INTO song(artist_id, title, year)
+    VALUES($1, $2, $3) RETURNING id`,
+    [artistId, title, year]
+  )
+    .then(data => {
+      console.log(data.id);
+      return db.one(
+        `SELECT artist.name, song.title, song.id FROM song, artist 
+    
+        WHERE artist.id = song.artist_id
+        AND song.id = $1 `,
+        [data.id]
+      );
+      // let's combine returned id with submitted data and
+      // return object with id to user
+    })
+    .then(artistData => {
+      res.json(Object.assign({}, { artistData }, req.body));
+    })
+    .catch(error => {
+      res.json({
+        error: error.message
+      });
+    });
+});
+
+//POST /songs has already been implemented. Update it so that returns object with id, artist (name, not artist_id) and title. You will probably need to run a second query to get the artist.
 
 app.listen(8080, function() {
   console.log("Listening on port 8080!");
