@@ -120,6 +120,76 @@ app.post("/api/songs", function(req, res) {
     });
 });
 
+app.post("/api/playlists", function(req, res) {
+    const { name } = req.body;
+    db.one(
+      `INSERT INTO playlist(name)
+        VALUES($1) RETURNING id`,
+      [name]
+    )
+      .then(data => {
+        res.json(Object.assign({}, { id: data.id }, req.body));
+      })
+      .catch(error => {
+        res.json({
+          error: error.message
+        });
+      });
+  });
+
+  app.post("/api/playlists/:playlistId/songs", function(req, res) {
+    const { songId } = req.body;
+    const playlistId = req.params.playlistId;
+    console.log (playlistId)
+
+    db.one(
+      `INSERT INTO song_playlist(song_id, playlist_id)
+        VALUES($1, $2) RETURNING id`,
+      [songId, playlistId]
+    )
+      .then(data => {
+        res.json(Object.assign({}, { id: data.id }, req.body));
+      })
+      .catch(error => {
+        res.json({
+          error: error.message
+        });
+      });
+  });
+
+  app.delete("/api/playlists/:id/songs/:songId", function(req, res) {
+    const playlistId = req.params.id;
+    const songId = req.params.songId;
+
+    db.none(
+        'DELETE from song_playlist WHERE song_id = $1 and playlist_id = $2', [playlistId, songId]
+    )
+    .then(res.status(204).send('deleted'))
+    .catch(error => {
+        res.json({
+            error: error.message
+        });
+    });
+  })
+
+
+  app.delete("/api/playlists/:id", function(req, res) {
+    const playlistId = req.params.id;
+
+    db.none(
+        'DELETE from song_playlist WHERE playlist_id = $1', [playlistId]
+    )
+    .then(db.none(
+        'DELETE from playlist WHERE id = $1', [playlistId]        
+    ))
+    .then(res.status(204).send('deleted'))
+    .catch(error => {
+        res.json({
+            error: error.message
+        });
+    });
+  })
+
 //POST /songs has already been implemented. Update it so that returns object with id, artist (name, not artist_id) and title. You will probably need to run a second query to get the artist.
 
 app.listen(8080, function() {
