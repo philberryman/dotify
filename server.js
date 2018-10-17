@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 //     });
 // });
 
-app.get("/api/artist", function(req, res) {
+app.get("/api/artists", function(req, res) {
   db.any("SELECT name FROM artist")
     .then(function(data) {
       res.json(data);
@@ -46,7 +46,28 @@ app.get("/api/songs", function(req, res) {
     });
 });
 
-//song.title artist.id
+app.get("/api/playlists", function(req, res) {
+    db.any("SELECT id, name FROM playlist")
+      .then(function(data) {
+        res.json(data);
+      })
+      .catch(function(error) {
+        res.json({ error: error.message });
+      });
+  });
+
+  app.get("/api/songs/:id", function(req, res) {
+    const id = req.params.id
+    console.log(id)
+    db.any("SELECT song.id, artist.name, song.title FROM song, artist WHERE artist.id = song.artist_id AND song.id = $1" , [id])
+      .then(function(data) {
+        res.json(data);
+      })
+      .catch(function(error) {
+        res.json({ error: error.message });
+      });
+  });
+
 
 app.listen(8080, function() {
   console.log("Listening on port 8080!");
